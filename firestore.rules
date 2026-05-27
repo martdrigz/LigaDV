@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'martdrigz@gmail.com' ||
+        request.auth.token.email == 'lioneldavinci86@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidPlayer(p) {
+      return p.keys().hasAll(['id', 'name', 'number', 'skill', 'speed', 'primaryPos', 'secondaryPos']) &&
+             p.keys().size() == 7 &&
+             p.id is string && p.id.size() <= 100 &&
+             p.name is string && p.name.size() > 0 && p.name.size() <= 100 &&
+             p.number is int && p.number >= 0 && p.number <= 999 &&
+             p.skill is int && p.skill >= 1 && p.skill <= 10 &&
+             p.speed is int && p.speed >= 1 && p.speed <= 10 &&
+             p.primaryPos is string && p.secondaryPos is string;
+    }
+
+    function isValidMatch(m) {
+      // result is optional until completed
+      return m.keys().hasAll(['id', 'date', 'location', 'status', 'teamA', 'teamB']) &&
+             m.id is string && m.id.size() <= 100 &&
+             m.date is string && 
+             m.location is string && m.location.size() <= 200 &&
+             m.status in ['scheduled', 'completed'] &&
+             m.teamA is map && m.teamB is map;
+    }
+
+    match /players/{playerId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(playerId);
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(matchId);
+    }
+    
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; 
+    }
+  }
+}

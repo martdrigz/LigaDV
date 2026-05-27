@@ -1,0 +1,8 @@
+{
+  "name": "Remix: MatchDay: Bellotti vs Fluvito VS 1.10",
+  "description": "Balance teams for Bellotti and Fluvito FC using player skills, track statistics, and manage matchday lineups and game details.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
