@@ -107,17 +107,17 @@ export function Layout() {
             </motion.div>
           </AnimatePresence>
         </main>
-
-        {/* Mobile Bottom Navigation */}
-        {!isMatchView && (
-          <nav className="md:hidden absolute bottom-0 left-0 right-0 h-[65px] bg-[#0a0a0a]/95 backdrop-blur-2xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] z-50 flex items-center justify-around px-2">
-            <BottomNavButton to="/" icon={<Home size={22} />} label="Inicio" />
-            <BottomNavButton to="/roster" icon={<Users size={22} />} label="Jugadores" />
-            <BottomNavButton to="/setup" icon={<CalendarPlus size={22} />} label="Sorteo" />
-            <BottomNavButton to="/stats" icon={<BarChart2 size={22} />} label="Estadística" />
-          </nav>
-        )}
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      {!isMatchView && (
+        <nav className="md:hidden flex-none h-[70px] bg-[#0a0a0a]/95 backdrop-blur-2xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] z-50 flex items-center justify-around px-2">
+          <BottomNavButton to="/" icon={<Home size={22} />} label="Inicio" />
+          <BottomNavButton to="/roster" icon={<Users size={22} />} label="Jugadores" />
+          <BottomNavButton to="/setup" icon={<CalendarPlus size={22} />} label="Sorteo" />
+          <BottomNavButton to="/stats" icon={<BarChart2 size={22} />} label="Estadística" />
+        </nav>
+      )}
     </div>
   );
 }
