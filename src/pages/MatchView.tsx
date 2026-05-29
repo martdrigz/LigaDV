@@ -317,6 +317,7 @@ export function MatchView() {
                   <AnimatedButton
                      onClick={handleSaveResult}
                      disabled={match.status === 'completed' && match.result?.teamAGoals === goalsA && match.result?.teamBGoals === goalsB}
+                     loading={loading}
                      variant={match.status === 'completed' && match.result?.teamAGoals === goalsA && match.result?.teamBGoals === goalsB ? "secondary" : "primary"}
                      className="w-full h-14 text-sm font-black tracking-widest uppercase rounded-xl"
                   >
