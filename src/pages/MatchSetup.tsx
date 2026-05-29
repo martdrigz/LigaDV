@@ -6,6 +6,7 @@ import { getPlayers, saveMatch, getMatches } from '../lib/storage';
 import { generateBalancedTeams } from '../lib/teamGenerator';
 import { MapPin, Search, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { AnimatedButton } from '../components/ui/animated-button';
 
 export function MatchSetup() {
   const navigate = useNavigate();
@@ -219,18 +220,16 @@ export function MatchSetup() {
         </div>
       </div>
 
-      <div className="fixed bottom-[75px] md:bottom-8 left-0 right-0 px-4 md:px-0 md:max-w-7xl md:mx-auto z-10 pointer-events-none flex justify-center">
-        <button
+      <div className="fixed bottom-[70px] md:bottom-8 left-0 right-0 px-4 md:px-0 md:max-w-7xl md:mx-auto z-10 pointer-events-none flex justify-center">
+        <AnimatedButton
           onClick={handleGenerate}
           disabled={selectedIds.size < 10}
-          className={`pointer-events-auto w-full max-w-sm h-14 rounded-2xl flex items-center justify-center font-bold text-base transition-all shadow-xl ${
-            selectedIds.size >= 10 
-              ? 'bg-[#eaba3f] text-black hover:bg-[#d9a32c]' 
-              : 'bg-white/10 text-white/50 border border-white/10'
-          }`}
+          loading={loading}
+          size="lg"
+          className="pointer-events-auto w-full max-w-sm h-14"
         >
           Realizar sorteo
-        </button>
+        </AnimatedButton>
       </div>
     </div>
   );
