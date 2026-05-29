@@ -1,19 +1,23 @@
 import React, { ButtonHTMLAttributes, forwardRef, MouseEvent, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
+import { Loader2 } from "lucide-react";
 
 interface AnimatedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
+  loading?: boolean;
 }
 
 export const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>(
-  ({ className, variant = "primary", size = "md", children, onClick, ...props }, ref) => {
+  ({ className, variant = "primary", size = "md", children, onClick, loading, disabled, ...props }, ref) => {
     const [rippleStyle, setRippleStyle] = useState({});
     const [isRippling, setIsRippling] = useState(false);
 
     const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+      if (loading || disabled) return;
+      
       const button = e.currentTarget;
       const rect = button.getBoundingClientRect();
       
@@ -39,10 +43,11 @@ export const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>
     return (
       <motion.button
         ref={ref}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.96 }}
+        whileHover={loading || disabled ? {} : { scale: 1.02 }}
+        whileTap={loading || disabled ? {} : { scale: 0.96 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
         onClick={handleClick}
+        disabled={loading || disabled}
         className={cn(
           "relative overflow-hidden font-bold transition-colors flex items-center justify-center gap-2 outline-none disabled:opacity-50 disabled:pointer-events-none",
           {
@@ -58,8 +63,12 @@ export const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>
         )}
         {...props}
       >
-        {children}
-        {isRippling && (
+        {loading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          children
+        )}
+        {isRippling && !loading && (
           <span
             className="absolute rounded-full bg-white/30 animate-ripple pointer-events-none"
             style={rippleStyle}
