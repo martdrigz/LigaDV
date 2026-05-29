@@ -13,6 +13,7 @@ import { useFirebase } from '../components/FirebaseProvider';
 export function Roster() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [playerStats, setPlayerStats] = useState<Record<string, PlayerStats>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -136,11 +137,9 @@ export function Roster() {
         });
         
         setLoading(true);
+        setIsSaving(true);
         try {
           if (importMode === 'reset') {
-            // Firestore reset is harder, we'd need to delete all first.
-            // For now let's just append or add logic to clear collection
-            // But to keep it simple, we just save them.
             await savePlayers(importedPlayers);
           } else {
             await savePlayers(importedPlayers);
@@ -151,6 +150,7 @@ export function Roster() {
           console.error(error);
           alert('Error al importar jugadores');
         } finally {
+          setIsSaving(false);
           setLoading(false);
         }
       },
@@ -169,6 +169,7 @@ export function Roster() {
   };
 
   const performDeletePlayer = async (id: string) => {
+    setIsSaving(true);
     setLoading(true);
     try {
       await deleteSinglePlayer(id);
@@ -176,12 +177,13 @@ export function Roster() {
     } catch (e) {
       console.error(e);
     } finally {
+      setIsSaving(false);
       setLoading(false);
     }
   };
 
   const handleSavePlayer = async (playerData: Omit<Player, 'id'>) => {
-    setLoading(true);
+    setIsSaving(true);
     try {
       if (selectedPlayer) {
         await saveSinglePlayer({ ...playerData, id: selectedPlayer.id });
@@ -198,7 +200,7 @@ export function Roster() {
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -236,6 +238,7 @@ export function Roster() {
         onClose={() => setIsModalOpen(false)} 
         onSave={handleSavePlayer}
         player={selectedPlayer}
+        loading={isSaving}
       />
       
       <PinModal 
@@ -266,6 +269,7 @@ export function Roster() {
             <AnimatedButton
               onClick={openAddModal}
               variant="primary"
+              loading={isSaving}
               className="flex-1 md:flex-none justify-center"
             >
               <UserPlus size={14} /> <span>AGREGAR</span><span className="hidden md:inline"> JUGADOR</span>
@@ -274,6 +278,7 @@ export function Roster() {
             <AnimatedButton
               onClick={() => triggerImport('append')}
               variant="secondary"
+              loading={isSaving}
               className="flex-1 md:flex-none justify-center"
             >
               <Upload size={14} /> <span>IMPORTAR</span><span className="hidden md:inline"> LISTA CSV</span>
@@ -285,6 +290,7 @@ export function Roster() {
                 setIsPinModalOpen(true);
               }}
               variant="secondary"
+              loading={isSaving}
               className="flex-1 md:flex-none justify-center hover:border-red-500/30 group"
             >
               <Trash2 size={14} className="text-red-500 group-hover:scale-110 transition-transform" /> <span>RESETEAR</span>
@@ -385,7 +391,7 @@ export function Roster() {
   );
 }
 
-function PlayerModal({ isOpen, onClose, onSave, player }: { isOpen: boolean; onClose: () => void; onSave: (p: Omit<Player, 'id'>) => void; player?: Player }) {
+function PlayerModal({ isOpen, onClose, onSave, player, loading }: { isOpen: boolean; onClose: () => void; onSave: (p: Omit<Player, 'id'>) => void; player?: Player; loading?: boolean }) {
   const [formData, setFormData] = useState({
     name: '',
     number: '',
@@ -543,6 +549,7 @@ function PlayerModal({ isOpen, onClose, onSave, player }: { isOpen: boolean; onC
           type="submit"
           variant="primary"
           size="lg"
+          loading={loading}
           className="w-full mt-6 text-sm tracking-widest uppercase font-black"
         >
           {player ? "Confirmar Edición" : "Confirmar Fichaje"}
