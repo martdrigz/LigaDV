@@ -10,13 +10,14 @@ import { Roster } from './pages/Roster';
 import { MatchSetup } from './pages/MatchSetup';
 import { MatchView } from './pages/MatchView';
 import { Stats } from './pages/Stats';
+import { Audit } from './pages/Audit';
 
 import { FirebaseProvider } from './components/FirebaseProvider';
 
 export default function App() {
   return (
     <FirebaseProvider>
-      <BrowserRouter basename="/LigaDV/">
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="setup" element={<MatchSetup />} />
             <Route path="match/:matchId" element={<MatchView />} />
             <Route path="stats" element={<Stats />} />
+            <Route path="audit" element={<Audit />} />
           </Route>
         </Routes>
       </BrowserRouter>

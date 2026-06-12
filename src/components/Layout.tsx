@@ -1,8 +1,8 @@
 import React from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { Home, Users, BarChart2, CalendarPlus, ChevronLeft, LogIn, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useFirebase } from './FirebaseProvider';
 
 export function Layout() {
@@ -11,11 +11,11 @@ export function Layout() {
   const isMatchView = location.pathname.startsWith('/match/');
 
   return (
-    <div className="flex flex-col h-screen bg-[#050505] text-white font-sans overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-[#050505] text-white font-sans overflow-hidden">
       
       {/* Desktop Top Header Navigation */}
       <header className="hidden md:flex flex-none items-center justify-between px-8 h-20 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl z-50">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3 active:scale-95 transition-transform">
           <div className="w-9 h-9 rounded-full bg-[#eaba3f] flex items-center justify-center font-black text-black">
             M
           </div>
@@ -23,7 +23,7 @@ export function Layout() {
             <h1 className="text-xl font-black tracking-tight leading-none uppercase">MatchDay</h1>
             <span className="text-[10px] font-bold text-[#eaba3f] tracking-[0.2em] leading-none mt-1 ml-0.5">LIGA DV</span>
           </div>
-        </div>
+        </Link>
         
         <nav className="flex items-center gap-2">
           <DesktopNavLink to="/" icon={<Home size={18} />} label="Inicio" />
@@ -57,43 +57,34 @@ export function Layout() {
       </header>
 
       {/* Mobile Top Header */}
-      <header className="md:hidden flex-none bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/5 px-4 h-14 flex items-center justify-between z-40 sticky top-0">
-        {isMatchView ? (
-          <button 
-            onClick={() => window.history.back()} 
-            className="flex items-center gap-1 text-[#eaba3f] font-medium"
-          >
-            <ChevronLeft size={24} /> Volver
-          </button>
-        ) : (
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#eaba3f] flex items-center justify-center font-black text-black text-sm">
-                M
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-base font-bold tracking-tight leading-none uppercase">MatchDay</h1>
-                <span className="text-[8px] font-bold text-[#eaba3f] tracking-widest leading-none mt-0.5 ml-0.5">LIGA DV</span>
-              </div>
+      <header className="md:hidden flex-none bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/5 px-4 h-14 flex items-center justify-between z-40">
+        <div className="flex items-center justify-between w-full">
+          <Link to="/" className="flex items-center gap-2 active:scale-95 transition-transform">
+            <div className="w-7 h-7 rounded-full bg-[#eaba3f] flex items-center justify-center font-black text-black text-sm">
+              M
             </div>
-            
-            {user ? (
-              <button onClick={() => logout()} className="text-gray-500 p-2">
-                <LogOut size={20} />
-              </button>
-            ) : (
-              <button onClick={() => signIn()} className="text-[#eaba3f] p-2">
-                <LogIn size={20} />
-              </button>
-            )}
-          </div>
-        )}
+            <div className="flex flex-col">
+              <h1 className="text-base font-bold tracking-tight leading-none uppercase">MatchDay</h1>
+              <span className="text-[8px] font-bold text-[#eaba3f] tracking-widest leading-none mt-0.5 ml-0.5">LIGA DV</span>
+            </div>
+          </Link>
+          
+          {user ? (
+            <button onClick={() => logout()} className="text-gray-500 p-2">
+              <LogOut size={20} />
+            </button>
+          ) : (
+            <button onClick={() => signIn()} className="text-[#eaba3f] p-2">
+              <LogIn size={20} />
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+75px)] md:pb-8 relative scroll-smooth overscroll-y-contain">
+        <main className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)] relative scroll-smooth overscroll-y-contain">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -110,14 +101,12 @@ export function Layout() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      {!isMatchView && (
-        <nav className="md:hidden flex-none h-[70px] bg-[#0a0a0a]/95 backdrop-blur-2xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] z-50 flex items-center justify-around px-2">
-          <BottomNavButton to="/" icon={<Home size={22} />} label="Inicio" />
-          <BottomNavButton to="/roster" icon={<Users size={22} />} label="Jugadores" />
-          <BottomNavButton to="/setup" icon={<CalendarPlus size={22} />} label="Sorteo" />
-          <BottomNavButton to="/stats" icon={<BarChart2 size={22} />} label="Estadística" />
-        </nav>
-      )}
+      <nav className="md:hidden flex-none h-[70px] bg-[#0a0a0a]/95 backdrop-blur-2xl border-t border-white/5 pb-[env(safe-area-inset-bottom)] z-50 flex items-center justify-around px-2">
+        <BottomNavButton to="/" icon={<Home size={22} />} label="Inicio" />
+        <BottomNavButton to="/roster" icon={<Users size={22} />} label="Jugadores" />
+        <BottomNavButton to="/setup" icon={<CalendarPlus size={22} />} label="Sorteo" />
+        <BottomNavButton to="/stats" icon={<BarChart2 size={22} />} label="Estadística" />
+      </nav>
     </div>
   );
 }
@@ -140,6 +129,7 @@ function DesktopNavLink({ to, icon, label }: { to: string; icon: React.ReactNode
       </NavLink>
   );
 }
+
 function BottomNavButton({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
     <NavLink

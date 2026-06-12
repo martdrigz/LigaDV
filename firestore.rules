@@ -64,6 +64,11 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isAdmin() && isValidId(matchId);
     }
+
+    match /associations/{associationId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(associationId);
+    }
     
     match /admins/{adminId} {
       allow read: if isSignedIn();

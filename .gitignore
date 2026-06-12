@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Configuración de Firebase y Seguridad
+firebase-applet-config.json
+security_spec.md
+security.md
+# firestore.rules # Descomenta si quieres que tus reglas también sean privadas

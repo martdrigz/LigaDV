@@ -2,22 +2,27 @@ import React, { useState, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Player, Position, PlayerStats } from '../types';
 import { playerSchema } from '../schemas';
-import { getPlayers, savePlayers, savePlayer as saveSinglePlayer, deletePlayer as deleteSinglePlayer, getPlayerStats } from '../lib/storage';
-import { Upload, Users, Search, Trash2, UserPlus, Pencil, Loader2 } from 'lucide-react';
+import { getPlayers, savePlayers, savePlayer as saveSinglePlayer, deletePlayer as deleteSinglePlayer, getPlayerStats, getMatches } from '../lib/storage';
+import { Upload, Users, Search, Trash2, UserPlus, Pencil, Loader2, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { PinModal } from '../components/PinModal';
 import { AnimatedModal } from '../components/ui/animated-modal';
 import { AnimatedButton } from '../components/ui/animated-button';
 import { useFirebase } from '../components/FirebaseProvider';
+import { PlayerDetailCard } from '../components/PlayerDetailCard';
+import { Match } from '../types';
 
 export function Roster() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [playerStats, setPlayerStats] = useState<Record<string, PlayerStats>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>();
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailPlayer, setDetailPlayer] = useState<Player | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [pinAction, setPinAction] = useState<{ type: 'reset' | 'append' | 'edit' | 'delete', player?: Player }>({ type: 'reset' });
   const [importMode, setImportMode] = useState<'append' | 'reset'>('append');
@@ -27,6 +32,8 @@ export function Roster() {
     setLoading(true);
     try {
       const list = await getPlayers();
+      const allMatches = await getMatches();
+      setMatches(allMatches);
       // Apply the specific fix if needed
       let needsSave = false;
       const updated = list.map(p => {
@@ -93,15 +100,16 @@ export function Roster() {
         const importedPlayers: Player[] = results.data.map((row: any) => {
           const findVal = (terms: string[]) => {
             const key = Object.keys(row).find(k => 
-              terms.some(t => k.toLowerCase().trim().includes(t.toLowerCase()))
+              terms.some(t => k.toLowerCase().trim() === t.toLowerCase() || k.toLowerCase().trim().includes(t.toLowerCase()))
             );
             return key ? row[key] : null;
           };
 
+          const rawId = findVal(['id', 'playerid', 'identificador']);
           const rawName = findVal(['player', 'nombre', 'jugador']) || 'Desconocido';
           const rawNum = findVal(['numero', 'number', '#']) || '0';
-          const rawSkill = findVal(['habil', 'skill', 'puntaje']) || 'Regular';
-          const rawSpeed = findVal(['veloc', 'speed', 'correr']) || 'Regular';
+          const rawSkill = findVal(['habil', 'skill', 'p_habilidad']) || 'Regular';
+          const rawSpeed = findVal(['veloc', 'speed', 'p_velocidad']) || 'Regular';
           const rawPos1 = findVal(['posic', 'puesto 1', 'primary']) || 'MED';
           
           const rawPos2Key = Object.keys(row).find(k => 
@@ -126,7 +134,7 @@ export function Roster() {
           };
 
           return {
-            id: Math.random().toString(36).substr(2, 9),
+            id: rawId?.toString() || Math.random().toString(36).substr(2, 9),
             name: rawName.toString().trim(),
             number: parseInt(rawNum.toString().replace(/[^0-9]/g, '') || '0', 10),
             skill: mapStat(rawSkill),
@@ -220,7 +228,7 @@ export function Roster() {
   };
 
   const filteredPlayers = players.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
-  const { user } = useFirebase();
+  const { user, isAdmin } = useFirebase();
 
   if (loading && players.length === 0) {
     return (
@@ -233,30 +241,7 @@ export function Roster() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-32">
-      <PlayerModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSavePlayer}
-        player={selectedPlayer}
-        loading={isSaving}
-      />
-      
-      <PinModal 
-        isOpen={isPinModalOpen} 
-        onClose={() => setIsPinModalOpen(false)} 
-        onSuccess={() => {
-          setIsPinModalOpen(false);
-          if (pinAction.type === 'reset' || pinAction.type === 'append') {
-            performImport();
-          } else if (pinAction.type === 'edit' && pinAction.player) {
-            performEditPlayer(pinAction.player);
-          } else if (pinAction.type === 'delete' && pinAction.player) {
-            performDeletePlayer(pinAction.player.id);
-          }
-        }} 
-      />
-
-      {user && (
+      {isAdmin && (
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h2 className="text-4xl font-extrabold tracking-tight text-white font-display">Jugadores</h2>
@@ -286,14 +271,26 @@ export function Roster() {
 
             <AnimatedButton
               onClick={() => {
-                setPinAction({ type: 'reset' });
-                setIsPinModalOpen(true);
+                const csv = Papa.unparse(players.map(p => ({
+                  ID: p.id,
+                  Nombre: p.name,
+                  Numero: p.number,
+                  Habilidad: p.skill,
+                  Velocidad: p.speed,
+                  Posicion1: p.primaryPos,
+                  Posicion2: p.secondaryPos
+                })));
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'jugadores.csv';
+                a.click();
               }}
               variant="secondary"
-              loading={isSaving}
-              className="flex-1 md:flex-none justify-center hover:border-red-500/30 group"
+              className="flex-1 md:flex-none justify-center hover:border-emerald-500/30 group"
             >
-              <Trash2 size={14} className="text-red-500 group-hover:scale-110 transition-transform" /> <span>RESETEAR</span>
+              <Upload size={14} className="group-hover:scale-110 transition-transform" /> <span>EXPORTAR</span>
             </AnimatedButton>
             
             <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
@@ -301,7 +298,7 @@ export function Roster() {
         </div>
       )}
 
-      {!user && (
+      {!isAdmin && (
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h2 className="text-4xl font-extrabold tracking-tight text-white font-display">Jugadores</h2>
@@ -331,14 +328,21 @@ export function Roster() {
           </div>
         ) : (
           filteredPlayers.sort((a,b) => (a.number || 0) - (b.number || 0)).map(p => (
-            <div key={p.id} className="bg-[#111111] border border-white/5 p-4 rounded-2xl flex items-center gap-4 hover:border-[#eaba3f]/30 transition-all hover:bg-white/[0.02] group relative">
+            <div 
+              key={p.id} 
+              onClick={() => {
+                setDetailPlayer(p);
+                setIsDetailModalOpen(true);
+              }}
+              className="bg-[#111111] border border-white/5 p-4 rounded-2xl flex items-center gap-4 hover:border-[#eaba3f]/30 transition-all hover:bg-white/[0.02] group relative cursor-pointer"
+            >
               <div className="w-12 h-12 flex-none rounded-xl bg-black border border-white/10 flex items-center justify-center text-xl font-bold text-[#eaba3f] shadow-inner">
                 {p.number === 0 ? "00" : p.number || '-'}
               </div>
               
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col">
-                  <span className="font-bold text-white truncate cursor-default leading-tight">
+                  <span className="font-bold text-lg text-white truncate leading-tight group-hover:text-[#eaba3f] transition-colors">
                     {p.name}
                   </span>
                   <div className="flex items-center gap-2 flex-wrap mt-1.5">
@@ -367,26 +371,73 @@ export function Roster() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={() => openEditModal(p)}
-                  className="p-1.5 text-gray-500 hover:text-[#eaba3f] transition-colors"
-                  title="Editar"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button 
-                  onClick={() => deletePlayerAction(p.id, p)}
-                  className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 size={14} />
-                </button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(p);
+                      }}
+                      className="p-1.5 text-gray-500 hover:text-[#eaba3f] transition-colors"
+                      title="Editar"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePlayerAction(p.id, p);
+                      }}
+                      className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+                <div className="w-14 h-14 flex-none rounded-full bg-black border border-white/10 flex items-center justify-center shadow-inner overflow-hidden">
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={28} className="text-gray-500" />
+                  )}
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
+
+      <PlayerModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSavePlayer}
+        player={selectedPlayer}
+        loading={isSaving}
+      />
+      
+      <PlayerDetailCard 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        player={detailPlayer}
+        matches={matches}
+      />
+      
+      <PinModal 
+        isOpen={isPinModalOpen} 
+        onClose={() => setIsPinModalOpen(false)} 
+        onSuccess={() => {
+          setIsPinModalOpen(false);
+          if (pinAction.type === 'reset' || pinAction.type === 'append') {
+            performImport();
+          } else if (pinAction.type === 'edit' && pinAction.player) {
+            performEditPlayer(pinAction.player);
+          } else if (pinAction.type === 'delete' && pinAction.player) {
+            performDeletePlayer(pinAction.player.id);
+          }
+        }} 
+      />
     </div>
   );
 }
@@ -399,6 +450,7 @@ function PlayerModal({ isOpen, onClose, onSave, player, loading }: { isOpen: boo
     speed: '7',
     primaryPos: 'MED' as Position,
     secondaryPos: 'MED' as Position,
+    imageUrl: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -412,9 +464,10 @@ function PlayerModal({ isOpen, onClose, onSave, player, loading }: { isOpen: boo
         speed: player.speed.toString(),
         primaryPos: player.primaryPos,
         secondaryPos: player.secondaryPos,
+        imageUrl: player.imageUrl || '',
       });
     } else {
-      setFormData({ name: '', number: '', skill: '7', speed: '7', primaryPos: 'MED', secondaryPos: 'MED' });
+      setFormData({ name: '', number: '', skill: '7', speed: '7', primaryPos: 'MED', secondaryPos: 'MED', imageUrl: '' });
     }
   }, [player, isOpen]);
 
@@ -429,6 +482,7 @@ function PlayerModal({ isOpen, onClose, onSave, player, loading }: { isOpen: boo
       speed: formData.speed,
       primaryPos: formData.primaryPos,
       secondaryPos: formData.secondaryPos,
+      imageUrl: formData.imageUrl,
     });
 
     if (!result.success) {
@@ -447,6 +501,7 @@ function PlayerModal({ isOpen, onClose, onSave, player, loading }: { isOpen: boo
       speed: result.data.speed,
       primaryPos: result.data.primaryPos,
       secondaryPos: result.data.secondaryPos,
+      imageUrl: result.data.imageUrl,
     });
   };
 
@@ -454,107 +509,127 @@ function PlayerModal({ isOpen, onClose, onSave, player, loading }: { isOpen: boo
     <AnimatedModal
       isOpen={isOpen}
       onClose={onClose}
-      className="max-w-md"
+      className="max-w-md w-full"
       title={player ? "Editar Jugador" : "Nuevo Jugador"}
-      description={player ? "Actualiza los datos del jugador" : "Completa los datos del fichaje"}
+      description={player ? "" : "Completa los datos del fichaje"}
       icon={player ? <Pencil className="text-[#eaba3f]" size={24} /> : <UserPlus className="text-[#eaba3f]" size={24} />}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-4">
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Nombre Completo</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={cn(
-                "w-full bg-black/50 border rounded-xl p-3 text-white outline-none focus:border-[#eaba3f] focus:ring-1 focus:ring-[#eaba3f]/50 transition-all shadow-inner",
-                errors.name ? "border-red-500/50" : "border-white/10"
-              )}
-              placeholder="Ej. Leo Messi"
-            />
-            {errors.name && <p className="text-red-500 text-[10px] mt-1 ml-1 font-bold">{errors.name}</p>}
-          </div>
-          
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Número</label>
-            <input
-              type="number"
-              value={formData.number}
-              onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-              className={cn(
-                "w-full bg-black/50 border rounded-xl p-3 text-white outline-none focus:border-[#eaba3f] focus:ring-1 focus:ring-[#eaba3f]/50 transition-all shadow-inner",
-                errors.number ? "border-red-500/50" : "border-white/10"
-              )}
-              placeholder="Ej. 10"
-            />
-            {errors.number && <p className="text-red-500 text-[10px] mt-1 ml-1 font-bold">{errors.number}</p>}
-          </div>
-
-          <div>
-             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1 flex justify-between">
-               <span>Habilidad</span> <span>{formData.skill}</span>
-             </label>
-             <input
-               type="range" min="1" max="10"
-               value={formData.skill}
-               onChange={(e) => setFormData({ ...formData, skill: e.target.value })}
-               className="w-full h-2 rounded-full cursor-pointer appearance-none bg-white/10 accent-[#eaba3f]"
-             />
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1 flex justify-between">
-               <span>Velocidad</span> <span>{formData.speed}</span>
-             </label>
-            <input
-              type="range" min="1" max="10"
-              value={formData.speed}
-              onChange={(e) => setFormData({ ...formData, speed: e.target.value })}
-              className="w-full h-2 rounded-full cursor-pointer appearance-none bg-white/10 accent-[#eaba3f]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+      <div className="max-h-[75vh] overflow-y-auto pr-2 no-scrollbar" style={{ marginTop: '0px' }}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div>
-               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Posición Principal</label>
-               <select 
-                  value={formData.primaryPos}
-                  onChange={(e) => setFormData({...formData, primaryPos: e.target.value as Position})}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white outline-none appearance-none font-medium"
-               >
-                  <option value="POR">POR (Arquero)</option>
-                  <option value="DEF">DEF (Defensor)</option>
-                  <option value="MED">MED (Medio)</option>
-                  <option value="DEL">DEL (Delantero)</option>
-               </select>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">URL Foto Perfil</label>
+              <input
+                type="text"
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                className={cn(
+                  "w-full bg-black/50 border rounded-xl p-3 text-white outline-none focus:border-[#eaba3f] focus:ring-1 focus:ring-[#eaba3f]/50 transition-all shadow-inner",
+                  errors.imageUrl ? "border-red-500/50" : "border-white/10"
+                )}
+                placeholder="https://ejemplo.com/foto.jpg"
+              />
+              {errors.imageUrl && <p className="text-red-500 text-[10px] mt-1 ml-1 font-bold">{errors.imageUrl}</p>}
+            </div>
+            
+            <div className="grid grid-cols-10 gap-3">
+              <div className="col-span-7">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Nombre Completo</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={cn(
+                    "w-full bg-black/50 border rounded-xl p-3 text-white outline-none focus:border-[#eaba3f] focus:ring-1 focus:ring-[#eaba3f]/50 transition-all shadow-inner",
+                    errors.name ? "border-red-500/50" : "border-white/10"
+                  )}
+                  placeholder="Ej. Leo Messi"
+                />
+                {errors.name && <p className="text-red-500 text-[10px] mt-1 ml-1 font-bold">{errors.name}</p>}
+              </div>
+              
+              <div className="col-span-3">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Número</label>
+                <input
+                  type="number"
+                  value={formData.number}
+                  onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                  className={cn(
+                    "w-full bg-black/50 border rounded-xl p-3 text-white outline-none focus:border-[#eaba3f] focus:ring-1 focus:ring-[#eaba3f]/50 transition-all shadow-inner",
+                    errors.number ? "border-red-500/50" : "border-white/10"
+                  )}
+                  placeholder="10"
+                />
+                {errors.number && <p className="text-red-500 text-[10px] mt-1 ml-1 font-bold">{errors.number}</p>}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block ml-1 flex justify-between" style={{ marginBottom: '0px' }}>
+                 <span>Habilidad</span> <span>{formData.skill}</span>
+               </label>
+               <input
+                 type="range" min="1" max="10"
+                 value={formData.skill}
+                 onChange={(e) => setFormData({ ...formData, skill: e.target.value })}
+                 className="w-full h-2 rounded-full cursor-pointer appearance-none bg-white/10 accent-[#eaba3f]"
+               />
             </div>
 
             <div>
-               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Posición Secundaria</label>
-               <select 
-                  value={formData.secondaryPos}
-                  onChange={(e) => setFormData({...formData, secondaryPos: e.target.value as Position})}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white outline-none appearance-none font-medium"
-               >
-                  <option value="DEF">DEF (Defensor)</option>
-                  <option value="MED">MED (Medio)</option>
-                  <option value="DEL">DEL (Delantero)</option>
-               </select>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1 flex justify-between">
+                 <span>Velocidad</span> <span>{formData.speed}</span>
+               </label>
+              <input
+                type="range" min="1" max="10"
+                value={formData.speed}
+                onChange={(e) => setFormData({ ...formData, speed: e.target.value })}
+                className="w-full h-2 rounded-full cursor-pointer appearance-none bg-white/10 accent-[#eaba3f]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">1ra Posición</label>
+                 <select 
+                    value={formData.primaryPos}
+                    onChange={(e) => setFormData({...formData, primaryPos: e.target.value as Position})}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white outline-none appearance-none font-medium"
+                 >
+                    <option value="POR">POR (Arquero)</option>
+                    <option value="DEF">DEF (Defensor)</option>
+                    <option value="MED">MED (Medio)</option>
+                    <option value="DEL">DEL (Delantero)</option>
+                 </select>
+              </div>
+
+              <div>
+                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">2da Posición</label>
+                 <select 
+                    value={formData.secondaryPos}
+                    onChange={(e) => setFormData({...formData, secondaryPos: e.target.value as Position})}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white outline-none appearance-none font-medium"
+                 >
+                    <option value="POR">POR (Arquero)</option>
+                    <option value="DEF">DEF (Defensor)</option>
+                    <option value="MED">MED (Medio)</option>
+                    <option value="DEL">DEL (Delantero)</option>
+                 </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <AnimatedButton
-          type="submit"
-          variant="primary"
-          size="lg"
-          loading={loading}
-          className="w-full mt-6 text-sm tracking-widest uppercase font-black"
-        >
-          {player ? "Confirmar Edición" : "Confirmar Fichaje"}
-        </AnimatedButton>
-      </form>
+          <AnimatedButton
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            className="w-full mt-6 text-sm tracking-widest uppercase font-black"
+          >
+            {player ? "Confirmar Edición" : "Confirmar Fichaje"}
+          </AnimatedButton>
+        </form>
+      </div>
     </AnimatedModal>
   );
 }

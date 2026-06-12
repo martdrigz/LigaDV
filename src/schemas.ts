@@ -10,6 +10,7 @@ export const playerSchema = z.object({
   speed: z.coerce.number().int().min(1, "Mínimo 1").max(10, "Máximo 10"),
   primaryPos: positionSchema,
   secondaryPos: positionSchema,
+  imageUrl: z.string().url("URL de imagen inválida").optional().or(z.literal("")),
 });
 
 export const matchSchema = z.object({

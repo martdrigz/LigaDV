@@ -1,10 +1,11 @@
 import { collection, getDocs, setDoc, doc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { db } from './firebase';
-import { Player, Match, PlayerStats } from '../types';
+import { Player, Match, PlayerStats, Association } from '../types';
 import { handleFirestoreError, OperationType } from '../components/FirebaseProvider';
 
 const PLAYERS_COLLECTION = 'players';
 const MATCHES_COLLECTION = 'matches';
+const ASSOCIATIONS_COLLECTION = 'associations';
 
 export const getPlayers = async (): Promise<Player[]> => {
   try {
@@ -80,6 +81,24 @@ export const deleteMatch = async (id: string) => {
   }
 };
 
+export const getAssociations = async (): Promise<Association[]> => {
+  try {
+    const associationsSnapshot = await getDocs(collection(db, ASSOCIATIONS_COLLECTION));
+    return associationsSnapshot.docs.map(doc => doc.data() as Association);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.LIST, ASSOCIATIONS_COLLECTION);
+    return [];
+  }
+};
+
+export const saveAssociation = async (association: Association) => {
+  try {
+    await setDoc(doc(db, ASSOCIATIONS_COLLECTION, association.id), association);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, `${ASSOCIATIONS_COLLECTION}/${association.id}`);
+  }
+};
+
 // Compute stats based on completed matches
 export const getPlayerStats = async (): Promise<PlayerStats[]> => {
   const players = await getPlayers();
@@ -93,7 +112,9 @@ export const getPlayerStats = async (): Promise<PlayerStats[]> => {
       matchesPlayed: 0,
       wins: 0,
       draws: 0,
-      losses: 0
+      losses: 0,
+      goals: 0,
+      assists: 0
     };
   });
   
@@ -117,6 +138,14 @@ export const getPlayerStats = async (): Promise<PlayerStats[]> => {
       if (bGoals > aGoals) statsMap[p.id].wins++;
       else if (bGoals < aGoals) statsMap[p.id].losses++;
       else statsMap[p.id].draws++;
+    });
+
+    // Add individual player stats
+    m.playerStats?.forEach(ps => {
+      if (statsMap[ps.playerId]) {
+        statsMap[ps.playerId].goals += ps.goals || 0;
+        statsMap[ps.playerId].assists += ps.assists || 0;
+      }
     });
   });
   

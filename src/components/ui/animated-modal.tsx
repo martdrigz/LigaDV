@@ -42,7 +42,8 @@ export function AnimatedModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+            style={{ margin: 0 }}
             onClick={onClose}
           />
           <motion.div
@@ -51,7 +52,7 @@ export function AnimatedModal({
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", stiffness: 350, damping: 25, bounce: 0.2 }}
             className={cn(
-              "bg-[#111111]/95 border border-white/10 rounded-3xl p-6 md:p-8 w-full shadow-2xl relative my-8 overflow-hidden",
+              "bg-[#111111]/95 border border-white/10 rounded-3xl p-6 md:p-8 w-full shadow-2xl relative my-8 overflow-hidden z-[101]",
               className
             )}
           >

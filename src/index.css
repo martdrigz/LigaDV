@@ -148,6 +148,16 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 @layer base {
   body {
     @apply bg-[#050505] text-white antialiased;
@@ -165,6 +175,11 @@
   }
 }
 
+.border {
+    /* border-style : var(--tw-border-style); */
+    /* border-width: 1px; */
+}
+
 .match-card {
   @apply bg-[#111111] rounded-2xl border border-white/5 shadow-sm overflow-hidden transition-transform active:scale-[0.98];
 }
@@ -175,5 +190,76 @@
 
 .secondary-btn {
   @apply bg-[#1a1a1a] border border-white/10 text-white font-medium rounded-xl px-4 py-3 text-center transition-all active:scale-[0.98];
+}
+
+/* Custom Drag and Drop Styles */
+.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  will-change: transform;
+  opacity: 0.95;
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+  transform-origin: center;
+  transition: opacity 0.2s ease;
+}
+
+.dragging-active {
+  cursor: grabbing !important;
+}
+
+.drag-ghost-fade-out {
+  opacity: 0;
+  transform: scale(0.9) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.is-dragging {
+  opacity: 0.05 !important;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.drop-active {
+  background-color: color-mix(in srgb, var(--zone-color, #eaba3f) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--zone-color, #eaba3f) 60%, transparent) !important;
+  box-shadow: 
+    inset 0 0 30px color-mix(in srgb, var(--zone-color, #eaba3f) 15%, transparent),
+    0 0 15px color-mix(in srgb, var(--zone-color, #eaba3f) 10%, transparent) !important;
+  transform: scale(1.01);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.swap-target {
+  background-color: color-mix(in srgb, var(--zone-color, #eaba3f) 30%, transparent) !important;
+  border-color: color-mix(in srgb, var(--zone-color, #eaba3f) 80%, transparent) !important;
+  transform: scale(1.08) translateY(-4px);
+  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.7);
+  z-index: 50;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+[data-item-id] {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+.just-moved {
+  animation: pop 0.45s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--c, #eaba3f) 40%, transparent);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 

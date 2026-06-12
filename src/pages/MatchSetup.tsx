@@ -2,18 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Player } from '../types';
 import { matchSchema } from '../schemas';
-import { getPlayers, saveMatch, getMatches } from '../lib/storage';
+import { getPlayers, saveMatch, getMatches, getPlayerStats } from '../lib/storage';
 import { generateBalancedTeams } from '../lib/teamGenerator';
 import { MapPin, Search, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { AnimatedButton } from '../components/ui/animated-button';
+import { PinModal } from '../components/PinModal';
+import { useFirebase } from '../components/FirebaseProvider';
+import { cn } from '../lib/utils';
+import { PlayerStats } from '../types';
 
 export function MatchSetup() {
   const navigate = useNavigate();
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [playerStats, setPlayerStats] = useState<Record<string, PlayerStats>>({});
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const { isAdmin } = useFirebase();
   
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -28,6 +35,13 @@ export function MatchSetup() {
       try {
         const players = await getPlayers();
         setAllPlayers(players);
+        
+        const statsArray = await getPlayerStats();
+        const statsMap = statsArray.reduce((acc, stat) => {
+          acc[stat.playerId] = stat;
+          return acc;
+        }, {} as Record<string, PlayerStats>);
+        setPlayerStats(statsMap);
       } catch (e) {
         console.error(e);
       } finally {
@@ -61,7 +75,8 @@ export function MatchSetup() {
     }
 
     const playing = allPlayers.filter(p => selectedIds.has(p.id));
-    const { teamA, teamB } = generateBalancedTeams(playing);
+    const existingMatches = await getMatches();
+    const { teamA, teamB } = generateBalancedTeams(playing, existingMatches);
     
     const matchDate = new Date(`${date}T${time}`);
     const matchYear = matchDate.getFullYear();
@@ -70,7 +85,6 @@ export function MatchSetup() {
     setLoading(true);
     try {
       // Calculate matchday for this season
-      const existingMatches = await getMatches();
       const matchesInSeason = existingMatches.filter(m => {
         if (m.season) return m.season === seasonName;
         return new Date(m.date).getFullYear() === matchYear;
@@ -89,19 +103,36 @@ export function MatchSetup() {
       };
 
       await saveMatch(newMatch);
-      navigate(`/match/${newMatch.id}`);
+      setTimeout(() => {
+        navigate(`/match/${newMatch.id}`);
+      }, 500);
     } catch (e) {
       console.error(e);
       alert('Error al crear el partido');
     } finally {
       setLoading(false);
+      setPinModalOpen(false);
     }
+  };
+
+  const initiateGenerate = () => {
+    if (selectedIds.size < 10) {
+      alert("Selecciona al menos 10 jugadores.");
+      return;
+    }
+    setPinModalOpen(true);
   };
 
   const filteredPlayers = allPlayers.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-32">
+      <PinModal 
+        isOpen={pinModalOpen} 
+        onClose={() => setPinModalOpen(false)} 
+        onSuccess={handleGenerate} 
+      />
+
       <div className="space-y-2">
         <h2 className="text-4xl font-extrabold tracking-tight text-white font-display">Sorteo de equipos</h2>
         <div className="flex items-center gap-2 text-sm font-medium text-gray-400 pl-0.5">
@@ -176,42 +207,63 @@ export function MatchSetup() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 h-[480px] overflow-y-auto pr-2 custom-scrollbar content-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-[580px] overflow-y-auto pr-2 custom-scrollbar content-start">
              {allPlayers.length === 0 ? (
                 <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-600 h-full border border-white/5 rounded-2xl bg-[#111111]">
                   <p className="text-[10px] font-bold uppercase tracking-widest">Sin jugadores</p>
                 </div>
              ) : (
-                filteredPlayers.map(p => {
+                filteredPlayers.sort((a,b) => (a.number || 0) - (b.number || 0)).map(p => {
                   const isSelected = selectedIds.has(p.id);
                   return (
                     <motion.button 
                       whileTap={{ scale: 0.98 }}
                       key={p.id} 
                       onClick={() => togglePlayer(p.id)}
-                      className={`relative flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                      className={cn(
+                        "relative flex items-center gap-4 p-4 rounded-2xl border transition-all text-left",
                         isSelected 
                           ? 'bg-[#eaba3f]/10 border-[#eaba3f]/40' 
-                          : 'bg-[#111111] border-white/5 hover:border-white/10'
-                      }`}
+                          : 'bg-[#111111] border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                      )}
                     >
-                       <div className={`w-10 h-10 flex-none rounded-lg border flex items-center justify-center font-bold text-sm transition-all ${
-                          isSelected 
-                            ? 'bg-[#eaba3f] border-[#eaba3f] text-black' 
-                            : 'bg-black border-white/10 text-gray-400'
-                       }`}>
-                         {p.number}
-                       </div>
-                       <div className="flex flex-col min-w-0">
-                         <span className={`font-bold text-sm tracking-tight truncate ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                           {p.name}
-                         </span>
-                         <div className="flex items-center gap-2 text-[9px] font-semibold text-gray-500 uppercase mt-0.5">
-                           <span>{p.primaryPos}</span>
-                           <span className="text-gray-700">•</span>
-                           <span>HB {p.skill}</span>
-                         </div>
-                       </div>
+                      <div className={cn(
+                        "w-12 h-12 flex-none rounded-xl border flex items-center justify-center text-xl font-bold transition-all shadow-inner",
+                        isSelected 
+                          ? 'bg-[#eaba3f] border-[#eaba3f] text-black' 
+                          : 'bg-black border-white/10 text-[#eaba3f]'
+                       )}>
+                        {p.number === 0 ? "00" : p.number || '-'}
+                      </div>
+                       
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col">
+                          <span className={cn(
+                            "font-bold text-lg truncate leading-tight",
+                            isSelected ? 'text-white' : 'text-gray-200'
+                          )}>
+                            {p.name}
+                          </span>
+                          <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                            <div className="flex items-center gap-1">
+                              <span className={cn(
+                                "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+                                p.primaryPos === 'DEF' && "bg-blue-500/10 text-blue-400",
+                                p.primaryPos === 'MED' && "bg-emerald-500/10 text-emerald-400",
+                                p.primaryPos === 'DEL' && "bg-red-500/10 text-red-400",
+                                p.primaryPos === 'POR' && "bg-yellow-500/10 text-yellow-500",
+                              )}>
+                                {p.primaryPos}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-500 uppercase ml-1">
+                              <span>PJ {playerStats[p.id]?.matchesPlayed || 0}</span>
+                              <span className="text-gray-700">•</span>
+                              <span>V {playerStats[p.id]?.wins || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </motion.button>
                   );
                 })
@@ -221,15 +273,17 @@ export function MatchSetup() {
       </div>
 
       <div className="fixed bottom-[70px] md:bottom-8 left-0 right-0 px-4 md:px-0 md:max-w-7xl md:mx-auto z-10 pointer-events-none flex justify-center">
-        <AnimatedButton
-          onClick={handleGenerate}
-          disabled={selectedIds.size < 10}
-          loading={loading}
-          size="lg"
-          className="pointer-events-auto w-full max-w-sm h-14"
-        >
-          Realizar sorteo
-        </AnimatedButton>
+        {isAdmin && (
+          <AnimatedButton
+            onClick={initiateGenerate}
+            disabled={selectedIds.size < 10}
+            loading={loading}
+            size="lg"
+            className="pointer-events-auto w-full max-w-sm h-14"
+          >
+            Realizar sorteo
+          </AnimatedButton>
+        )}
       </div>
     </div>
   );
