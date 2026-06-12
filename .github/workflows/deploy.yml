@@ -34,7 +34,11 @@ jobs:
         run: npm install --legacy-peer-deps
         
       - name: Build
-        run: npm run build
+        env:
+          VITE_FIREBASE_FIRESTORE_DATABASE_ID: "(default)"
+        run: |
+          npm run build
+          cp dist/index.html dist/404.html
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
