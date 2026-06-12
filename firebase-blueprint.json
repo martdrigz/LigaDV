@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "Football player information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "number": { "type": "integer" },
+        "skill": { "type": "integer" },
+        "speed": { "type": "integer" },
+        "primaryPos": { "type": "string" },
+        "secondaryPos": { "type": "string" }
+      },
+      "required": ["id", "name", "number", "skill", "speed", "primaryPos", "secondaryPos"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "Matchday game information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "season": { "type": "string" },
+        "matchday": { "type": "integer" },
+        "status": { "type": "string", "enum": ["scheduled", "completed"] },
+        "teamA": { "type": "object" },
+        "teamB": { "type": "object" },
+        "result": { "type": "object" }
+      },
+      "required": ["id", "date", "location", "status", "teamA", "teamB"]
+    }
+  },
+  "firestore": {
+    "/players/{playerId}": {
+      "schema": "Player",
+      "description": "Collection of available players"
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Collection of matches played or scheduled"
+    }
+  }
+}
