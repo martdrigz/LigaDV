@@ -841,7 +841,7 @@ function TeamConfigSection({ id, name, players, theme, formation, setFormation, 
           </div>
        </div>
        
-       <div className="p-6 md:p-8 flex flex-col relative z-10">
+       <div className="p-[20px] md:p-8 flex flex-col relative z-10 w-full overflow-hidden">
           <TeamRow 
             id={`${id}-att`} 
             label="Ataque" 
@@ -857,7 +857,7 @@ function TeamConfigSection({ id, name, players, theme, formation, setFormation, 
   );
 }
 
-function TeamRow({ id, label, players, zone, isAdmin, listStyle }: { id: string; label: string; players: Player[]; zone: 'def' | 'med' | 'att' | 'gk'; isAdmin: boolean; listStyle?: React.CSSProperties; key?: string }) {
+function TeamRow({ id, label, players, zone, isAdmin }: { id: string; label: string; players: Player[]; zone: 'def' | 'med' | 'att' | 'gk'; isAdmin: boolean; key?: string }) {
   const labelColors = {
     def: "text-blue-400/60",
     med: "text-green-400/60",
@@ -873,7 +873,7 @@ function TeamRow({ id, label, players, zone, isAdmin, listStyle }: { id: string;
       )}
     >
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-2">
           <div className={cn("text-[10px] font-black uppercase tracking-[0.2em]", labelColors[zone])}>
             {label}
           </div>
@@ -881,7 +881,7 @@ function TeamRow({ id, label, players, zone, isAdmin, listStyle }: { id: string;
         </div>
         <div className="h-px bg-white/5 w-full" />
       </div>
-      <div className="flex flex-wrap gap-2.5 min-h-[40px] pt-1" style={listStyle}>
+      <div className="flex flex-wrap gap-2.5 min-h-[40px] pt-1">
         {players.map(p => <SortablePlayer key={p.id} player={p} zone={zone} isAdmin={isAdmin} />)}
       </div>
     </div>

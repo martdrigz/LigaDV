@@ -9,6 +9,8 @@ coverage/
 
 # Configuración de Firebase y Seguridad
 firebase-applet-config.json
+firebase-blueprint.json
+firestore.rules
 security_spec.md
 security.md
 # firestore.rules # Descomenta si quieres que tus reglas también sean privadas
