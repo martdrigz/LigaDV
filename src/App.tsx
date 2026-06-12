@@ -17,7 +17,8 @@ import { FirebaseProvider } from './components/FirebaseProvider';
 export default function App() {
   return (
     <FirebaseProvider>
-      <BrowserRouter>
+      {/* Acá está la corrección clave: agregamos el basename */}
+      <BrowserRouter basename="/LigaDV/">
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
