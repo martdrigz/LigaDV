@@ -156,7 +156,8 @@ export function PlayerRankings({ advancedPlayerStats }: { advancedPlayerStats: a
                          <thead className="bg-black/20 text-gray-500 font-semibold border-b border-white/5 uppercase tracking-wider text-[10px]">
                              <tr>
                                  <th className="px-5 py-3">Jugador</th>
-                                 <th className="px-4 py-3 text-center">Asistencia</th>
+                                 <th className="px-4 py-3 text-center">Total</th>
+                                 <th className="px-4 py-3 text-center">%</th>
                                  <th className="px-5 py-3 text-center text-white">Consecutivos</th>
                              </tr>
                          </thead>
@@ -164,7 +165,8 @@ export function PlayerRankings({ advancedPlayerStats }: { advancedPlayerStats: a
                              {pres.map((s, i) => (
                                <motion.tr key={s.player.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="hover:bg-white/5">
                                  <td className="px-5 py-3 font-bold text-white">{s.player.name}</td>
-                                 <td className="px-4 py-3 text-center text-[#eaba3f] font-bold">{Math.round(s.attendancePercent)}%</td>
+                                 <td className="px-4 py-3 text-center font-bold">{s.matchesPlayed}</td>
+                                 <td className="px-4 py-3 text-center text-[#eaba3f]">{Math.round(s.attendancePercent)}%</td>
                                  <td className="px-5 py-3 text-center">{s.currentAttendanceStreak > 0 ? `${s.currentAttendanceStreak} al hilo` : '-'}</td>
                                </motion.tr>
                              ))}
