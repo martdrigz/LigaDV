@@ -76,7 +76,8 @@ export function Stats() {
   }, [matches]);
 
   const advancedPlayerStats = useMemo(() => {
-    const chronologicalMatches = [...matches].reverse();
+    const sortedMatchesDesc = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const chronologicalMatches = [...sortedMatchesDesc].reverse();
     
     return players.map(p => {
         let matchesPlayed = 0;
@@ -141,7 +142,7 @@ export function Stats() {
             }
         });
         
-        for (let m of matches) {
+        for (let m of sortedMatchesDesc) {
             const playedInMatch = m.teamA.players.some(x => x.id === p.id) || m.teamB.players.some(x => x.id === p.id);
             if (playedInMatch) currentAttendanceStreak++;
             else break;
