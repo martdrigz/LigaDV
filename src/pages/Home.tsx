@@ -112,23 +112,18 @@ export function Home() {
       
       {/* High-Impact Hero Section */}
       <section className="relative overflow-hidden pt-12 pb-14 px-6 rounded-[2.5rem] bg-[#0c0c0c] border border-white/5 shadow-2xl">
-        {/* Background Image with Gradient Overlay */}
-        <div 
-          className="absolute inset-0 z-0 opacity-[0.65] sm:block hidden"
-          style={{ 
-            backgroundImage: 'url("https://demo.martinrod.com/images/pre-match-big.jpg")',
-            backgroundSize: '150%',
-            backgroundPosition: 'center 26%',
-          }}
-        />
-        <div 
-          className="absolute inset-0 z-0 opacity-[0.65] sm:hidden block"
-          style={{ 
-            backgroundImage: 'url("https://demo.martinrod.com/images/pre-match-big.jpg")',
-            backgroundSize: '342%',
-            backgroundPosition: 'center top',
-          }}
-        />
+        {/* Video Background with Gradient Overlay */}
+        <div className="absolute inset-0 z-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-50"
+          >
+            <source src="https://demo.martinrod.com/images/matchday.webm" type="video/webm" />
+          </video>
+        </div>
         <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c]/40 to-transparent" />
         
         {/* Abstract Background Glows */}
